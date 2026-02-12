@@ -102,10 +102,28 @@ class FlowScene(QGraphicsScene):
             self._drag_source_port = None
             return
 
+        # If the exact port the user dropped on is already connected,
+        # try to get an available one on the same node
+        if target_port.connected:
+            target_port = target_port.parent_node_item.get_available_inlet()
+            if target_port is None:
+                self._drag_source_port = None
+                return
+
+        source_port = self._drag_source_port
+        if source_port.connected:
+            source_port = source_port.parent_node_item.get_available_outlet()
+            if source_port is None:
+                self._drag_source_port = None
+                return
+
         connector = Connector(source_id=src_node.id, target_id=tgt_node.id)
         self.project.add_connector(connector)
 
-        ci = ConnectorItem(connector, self._drag_source_port, target_port)
+        source_port.connected = True
+        target_port.connected = True
+
+        ci = ConnectorItem(connector, source_port, target_port)
         self.addItem(ci)
         self._connector_items[connector.id] = ci
 
@@ -151,13 +169,19 @@ class FlowScene(QGraphicsScene):
 
     # ── Deletion ─────────────────────────────────────────────────────
 
+    def _remove_connector_item(self, ci: ConnectorItem):
+        """Remove a ConnectorItem and free its ports."""
+        ci.source_port_item.connected = False
+        ci.target_port_item.connected = False
+        self._connector_items.pop(ci.connector.id, None)
+        self.removeItem(ci)
+
     def delete_selected(self):
         """Remove selected nodes and connectors from both scene and project."""
         for item in list(self.selectedItems()):
             if isinstance(item, ConnectorItem):
                 self.project.remove_connector(item.connector.id)
-                self._connector_items.pop(item.connector.id, None)
-                self.removeItem(item)
+                self._remove_connector_item(item)
             elif isinstance(item, NodeItem):
                 # Remove attached connectors first
                 attached = [
@@ -166,9 +190,9 @@ class FlowScene(QGraphicsScene):
                     or c.target_id == item.node.id
                 ]
                 for cid in attached:
-                    ci = self._connector_items.pop(cid, None)
+                    ci = self._connector_items.get(cid)
                     if ci:
-                        self.removeItem(ci)
+                        self._remove_connector_item(ci)
                 self.project.remove_node(item.node.id)
                 self._node_items.pop(item.node.id, None)
                 self.removeItem(item)
@@ -191,9 +215,11 @@ class FlowScene(QGraphicsScene):
             src_ni = self._node_items.get(c.source_id)
             tgt_ni = self._node_items.get(c.target_id)
             if src_ni and tgt_ni:
-                sp = src_ni.get_outlet_port()
-                tp = tgt_ni.get_inlet_port()
+                sp = src_ni.get_available_outlet()
+                tp = tgt_ni.get_available_inlet()
                 if sp and tp:
+                    sp.connected = True
+                    tp.connected = True
                     ci = ConnectorItem(c, sp, tp)
                     self.addItem(ci)
                     self._connector_items[c.id] = ci

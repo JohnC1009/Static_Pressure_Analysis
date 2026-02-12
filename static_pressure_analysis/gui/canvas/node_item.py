@@ -17,9 +17,18 @@ NODE_COLORS = {
     NodeType.PRESSURE_OUTPUT: ("#f3e5f5", "#8e24aa", "P"),
 }
 
+# Default (inlet_count, outlet_count) per node type
+_PORT_COUNTS = {
+    NodeType.FAN:             (0, 1),
+    NodeType.DAMPER:          (1, 1),
+    NodeType.MIXING_PLENUM:   (3, 1),   # multiple inlets
+    NodeType.DUCT_SPLIT:      (1, 3),   # multiple outlets
+    NodeType.PRESSURE_OUTPUT: (1, 0),
+}
+
 WIDTH = 180
 HEADER_H = 28
-PORT_SPACING = 24
+PORT_SPACING = 22
 BODY_PAD = 8
 CORNER_R = 8
 
@@ -35,42 +44,97 @@ class NodeItem(QGraphicsItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
         self.setZValue(1)
 
-        self._inlet_port = None
-        self._outlet_port = None
+        self._inlet_ports: list[PortItem] = []
+        self._outlet_ports: list[PortItem] = []
         self._status_lines: list[str] = []
-        self._height = HEADER_H + BODY_PAD * 2 + PORT_SPACING
 
-        self._create_ports()
+        n_in, n_out = _PORT_COUNTS.get(self.node.node_type, (1, 1))
+        self._create_ports(n_in, n_out)
+        self._recalc_height()
 
     # ── Ports ────────────────────────────────────────────────────────
 
-    def _create_ports(self):
-        has_inlet = self.node.node_type != NodeType.FAN
-        has_outlet = self.node.node_type != NodeType.PRESSURE_OUTPUT
+    def _create_ports(self, n_inlets: int, n_outlets: int):
+        for i in range(n_inlets):
+            p = PortItem("inlet", self, index=i)
+            self._inlet_ports.append(p)
 
-        port_y = HEADER_H + BODY_PAD + PORT_SPACING / 2
+        for i in range(n_outlets):
+            p = PortItem("outlet", self, index=i)
+            self._outlet_ports.append(p)
 
-        if has_inlet:
-            self._inlet_port = PortItem("inlet", self)
-            self._inlet_port.setPos(0, port_y)
+        self._layout_ports()
 
-        if has_outlet:
-            self._outlet_port = PortItem("outlet", self)
-            self._outlet_port.setPos(WIDTH, port_y)
+    def _layout_ports(self):
+        """Position all port items along the left/right edges."""
+        for i, p in enumerate(self._inlet_ports):
+            y = HEADER_H + BODY_PAD + PORT_SPACING / 2 + i * PORT_SPACING
+            p.setPos(0, y)
 
-    def get_inlet_port(self):
-        return self._inlet_port
+        for i, p in enumerate(self._outlet_ports):
+            y = HEADER_H + BODY_PAD + PORT_SPACING / 2 + i * PORT_SPACING
+            p.setPos(WIDTH, y)
 
-    def get_outlet_port(self):
-        return self._outlet_port
+    def _recalc_height(self):
+        max_ports = max(len(self._inlet_ports), len(self._outlet_ports), 1)
+        port_h = max_ports * PORT_SPACING + BODY_PAD * 2
+        status_h = len(self._status_lines) * 16 + BODY_PAD if self._status_lines else 0
+        self._height = HEADER_H + max(port_h, PORT_SPACING + BODY_PAD * 2) + status_h
+
+    def add_inlet_port(self) -> PortItem:
+        """Add a new inlet port and reflow the layout."""
+        self.prepareGeometryChange()
+        p = PortItem("inlet", self, index=len(self._inlet_ports))
+        self._inlet_ports.append(p)
+        self._layout_ports()
+        self._recalc_height()
+        self.update()
+        return p
+
+    def add_outlet_port(self) -> PortItem:
+        """Add a new outlet port and reflow the layout."""
+        self.prepareGeometryChange()
+        p = PortItem("outlet", self, index=len(self._outlet_ports))
+        self._outlet_ports.append(p)
+        self._layout_ports()
+        self._recalc_height()
+        self.update()
+        return p
+
+    def get_available_inlet(self) -> PortItem | None:
+        """Return the first unconnected inlet port, or add one if all full."""
+        for p in self._inlet_ports:
+            if not p.connected:
+                return p
+        # All occupied — grow if this node type supports multiple inlets
+        if self.node.node_type == NodeType.MIXING_PLENUM:
+            return self.add_inlet_port()
+        return None
+
+    def get_available_outlet(self) -> PortItem | None:
+        """Return the first unconnected outlet port, or add one if all full."""
+        for p in self._outlet_ports:
+            if not p.connected:
+                return p
+        # All occupied — grow if this node type supports multiple outlets
+        if self.node.node_type == NodeType.DUCT_SPLIT:
+            return self.add_outlet_port()
+        return None
+
+    def get_inlet_port(self) -> PortItem | None:
+        """Return first inlet port (for single-inlet nodes)."""
+        return self._inlet_ports[0] if self._inlet_ports else None
+
+    def get_outlet_port(self) -> PortItem | None:
+        """Return first outlet port (for single-outlet nodes)."""
+        return self._outlet_ports[0] if self._outlet_ports else None
 
     # ── Status display (populated after analysis) ────────────────────
 
     def set_status(self, lines: list[str]):
         self.prepareGeometryChange()
         self._status_lines = lines
-        status_h = len(lines) * 16 + BODY_PAD if lines else 0
-        self._height = HEADER_H + BODY_PAD * 2 + PORT_SPACING + status_h
+        self._recalc_height()
         self.update()
 
     # ── Qt overrides ─────────────────────────────────────────────────
@@ -122,23 +186,27 @@ class NodeItem(QGraphicsItem):
         # Port labels
         painter.setPen(QPen(QColor("#555")))
         painter.setFont(QFont("Segoe UI", 7))
-        port_y = HEADER_H + BODY_PAD + PORT_SPACING / 2
-        if self._inlet_port:
+        for i, p in enumerate(self._inlet_ports):
+            y = p.y()
+            label = f"IN {i+1}" if len(self._inlet_ports) > 1 else "IN"
             painter.drawText(
-                QRectF(14, port_y - 8, WIDTH / 2 - 14, 16),
-                Qt.AlignVCenter | Qt.AlignLeft, "IN",
+                QRectF(14, y - 8, WIDTH / 2 - 14, 16),
+                Qt.AlignVCenter | Qt.AlignLeft, label,
             )
-        if self._outlet_port:
+        for i, p in enumerate(self._outlet_ports):
+            y = p.y()
+            label = f"OUT {i+1}" if len(self._outlet_ports) > 1 else "OUT"
             painter.drawText(
-                QRectF(WIDTH / 2, port_y - 8, WIDTH / 2 - 14, 16),
-                Qt.AlignVCenter | Qt.AlignRight, "OUT",
+                QRectF(WIDTH / 2, y - 8, WIDTH / 2 - 14, 16),
+                Qt.AlignVCenter | Qt.AlignRight, label,
             )
 
         # Status text (analysis results)
         if self._status_lines:
             painter.setFont(QFont("Consolas", 7))
             painter.setPen(QPen(QColor("#555")))
-            base_y = HEADER_H + BODY_PAD * 2 + PORT_SPACING
+            max_ports = max(len(self._inlet_ports), len(self._outlet_ports), 1)
+            base_y = HEADER_H + BODY_PAD * 2 + max_ports * PORT_SPACING
             for i, line in enumerate(self._status_lines):
                 painter.drawText(
                     QRectF(8, base_y + i * 16, WIDTH - 16, 16),

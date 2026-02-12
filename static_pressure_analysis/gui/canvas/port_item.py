@@ -13,11 +13,13 @@ class PortItem(QGraphicsEllipseItem):
     Dragging from an outlet to an inlet creates a connector.
     """
 
-    def __init__(self, direction, parent_node_item):
+    def __init__(self, direction, parent_node_item, index=0):
         super().__init__(-RADIUS, -RADIUS, RADIUS * 2, RADIUS * 2,
                          parent_node_item)
         self.direction = direction  # "inlet" or "outlet"
         self.parent_node_item = parent_node_item
+        self.index = index
+        self.connected = False
         self._is_outlet = (direction == "outlet")
 
         color = QColor("#4a90d9") if self._is_outlet else QColor("#50c878")
