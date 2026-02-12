@@ -697,38 +697,12 @@ class StaticPressureApp:
                 self._rebuild_scen_tree()
             return
 
-        # --- Connect: waiting for source ---
+        # --- Connect: clicked empty canvas (not on a node) ---
         if self._mode == _CONNECT_SRC:
-            # Check if we clicked an outlet port
-            items = self.canvas.find_overlapping(cx - 8, cy - 8, cx + 8, cy + 8)
-            for item in items:
-                tags = self.canvas.gettags(item)
-                if "outlet_port" in tags:
-                    nid = self._nid_from_tags(tags)
-                    if nid:
-                        self._conn_src_id = nid
-                        self._mode = _CONNECT_TGT
-                        self._update_status()
-                        self._highlight_tools()
-                        return
+            # Clicked empty area, nothing to do — stay in connect mode
             return
-
-        # --- Connect: waiting for target ---
         if self._mode == _CONNECT_TGT:
-            items = self.canvas.find_overlapping(cx - 8, cy - 8, cx + 8, cy + 8)
-            for item in items:
-                tags = self.canvas.gettags(item)
-                if "inlet_port" in tags:
-                    nid = self._nid_from_tags(tags)
-                    if nid and nid != self._conn_src_id:
-                        conn = Connector(source_id=self._conn_src_id, target_id=nid)
-                        self.project.add_connector(conn)
-                        self._cancel_connect()
-                        self._mode = _CONNECT_SRC  # stay in connect mode
-                        self._update_status()
-                        self._redraw()
-                        return
-            # Clicked empty canvas: cancel source selection but stay in connect mode
+            # Clicked empty area — cancel source selection, stay in connect mode
             self._cancel_connect()
             self._mode = _CONNECT_SRC
             self._update_status()
@@ -771,12 +745,40 @@ class StaticPressureApp:
     # -- Node interactions -------------------------------------------------
 
     def _node_press(self, event, nid):
-        if self._mode in (_CONNECT_SRC, _CONNECT_TGT):
-            # Let _canvas_click handle port detection
-            return
         if self._mode == _PLACE:
             return
 
+        # --- Connect: select source node ---
+        if self._mode == _CONNECT_SRC:
+            node = self.project.nodes.get(nid)
+            if not node:
+                return
+            # Source must have an outlet (not a Pressure Output)
+            if node.node_type == NodeType.PRESSURE_OUTPUT:
+                return
+            self._conn_src_id = nid
+            self._mode = _CONNECT_TGT
+            self._update_status()
+            self._highlight_tools()
+            return
+
+        # --- Connect: select target node → create connector ---
+        if self._mode == _CONNECT_TGT:
+            node = self.project.nodes.get(nid)
+            if not node:
+                return
+            # Target must have an inlet (not a Fan) and not be the source
+            if node.node_type == NodeType.FAN or nid == self._conn_src_id:
+                return
+            conn = Connector(source_id=self._conn_src_id, target_id=nid)
+            self.project.add_connector(conn)
+            self._cancel_connect()
+            self._mode = _CONNECT_SRC  # stay in connect mode for chaining
+            self._update_status()
+            self._redraw()
+            return
+
+        # --- Select mode: select node and prepare drag ---
         self._select_node(nid)
         node = self.project.nodes.get(nid)
         if node:
