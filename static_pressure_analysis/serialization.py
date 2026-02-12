@@ -6,6 +6,7 @@ from pathlib import Path
 from .models import (
     Connector,
     DamperParameters,
+    DuctSinkSourceParameters,
     DuctSplitParameters,
     FanParameters,
     MixingPlenumParameters,
@@ -22,6 +23,7 @@ _PARAM_TYPE_MAP = {
     "DamperParameters": DamperParameters,
     "MixingPlenumParameters": MixingPlenumParameters,
     "DuctSplitParameters": DuctSplitParameters,
+    "DuctSinkSourceParameters": DuctSinkSourceParameters,
     "PressureOutputParameters": PressureOutputParameters,
 }
 

@@ -11,6 +11,7 @@ class NodeType(Enum):
     DAMPER = "Damper"
     MIXING_PLENUM = "Mixing Plenum"
     DUCT_SPLIT = "Duct Split"
+    DUCT_SINK_SOURCE = "Duct Sink/Source"
     PRESSURE_OUTPUT = "Pressure Output"
 
 
@@ -48,6 +49,12 @@ class DuctSplitParameters(NodeParameters):
 
 
 @dataclass
+class DuctSinkSourceParameters(NodeParameters):
+    """A zone node that can receive and supply air to multiple ducts."""
+    pressure_drop: float = 0.0   # in. w.g. loss through the zone
+
+
+@dataclass
 class PressureOutputParameters(NodeParameters):
     """A measurement node that displays calculated static pressure."""
     label: str = "SP"
@@ -74,6 +81,7 @@ class Node:
             NodeType.DAMPER: DamperParameters,
             NodeType.MIXING_PLENUM: MixingPlenumParameters,
             NodeType.DUCT_SPLIT: DuctSplitParameters,
+            NodeType.DUCT_SINK_SOURCE: DuctSinkSourceParameters,
             NodeType.PRESSURE_OUTPUT: PressureOutputParameters,
         }
         return defaults.get(self.node_type, NodeParameters)()

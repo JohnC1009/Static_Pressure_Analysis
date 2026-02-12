@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from .models import (
     Connector,
     DamperParameters,
+    DuctSinkSourceParameters,
     DuctSplitParameters,
     FanParameters,
     MixingPlenumParameters,
@@ -40,6 +41,8 @@ def _get_node_pressure_drop(node: Node) -> float:
     if isinstance(params, MixingPlenumParameters):
         return params.pressure_drop
     if isinstance(params, DuctSplitParameters):
+        return params.pressure_drop
+    if isinstance(params, DuctSinkSourceParameters):
         return params.pressure_drop
     return 0.0
 
@@ -131,11 +134,11 @@ def run_analysis(project: Project, scenario: Scenario | None = None) -> Analysis
                 # Airflow: if current node is a duct split, divide evenly
                 # (users can adjust via scenario or connector properties)
                 branch_airflow = current_airflow
-                if current_node and current_node.node_type == NodeType.DUCT_SPLIT and num_branches > 1:
+                if current_node and current_node.node_type in (NodeType.DUCT_SPLIT, NodeType.DUCT_SINK_SOURCE) and num_branches > 1:
                     branch_airflow = current_airflow / num_branches
 
-                # If target is a mixing plenum, airflow accumulates
-                if target_node.node_type == NodeType.MIXING_PLENUM:
+                # If target is a mixing plenum or sink/source, airflow accumulates
+                if target_node.node_type in (NodeType.MIXING_PLENUM, NodeType.DUCT_SINK_SOURCE):
                     prev_af = result.airflows.get(target_id, 0.0)
                     branch_airflow = prev_af + branch_airflow
                     # Use the lowest incoming SP (conservative)

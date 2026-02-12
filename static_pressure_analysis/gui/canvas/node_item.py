@@ -10,20 +10,22 @@ from .port_item import PortItem
 
 # (background, accent, icon_char) per equipment type
 NODE_COLORS = {
-    NodeType.FAN:             ("#fff3e0", "#fb8c00", "F"),
-    NodeType.DAMPER:          ("#e3f2fd", "#1e88e5", "D"),
-    NodeType.MIXING_PLENUM:   ("#e0f7fa", "#00897b", "M"),
-    NodeType.DUCT_SPLIT:      ("#e8f5e9", "#43a047", "Y"),
-    NodeType.PRESSURE_OUTPUT: ("#f3e5f5", "#8e24aa", "P"),
+    NodeType.FAN:              ("#fff3e0", "#fb8c00", "F"),
+    NodeType.DAMPER:           ("#e3f2fd", "#1e88e5", "D"),
+    NodeType.MIXING_PLENUM:    ("#e0f7fa", "#00897b", "M"),
+    NodeType.DUCT_SPLIT:       ("#e8f5e9", "#43a047", "Y"),
+    NodeType.DUCT_SINK_SOURCE: ("#efebe9", "#6d4c41", "Z"),
+    NodeType.PRESSURE_OUTPUT:  ("#f3e5f5", "#8e24aa", "P"),
 }
 
 # Default (inlet_count, outlet_count) per node type
 _PORT_COUNTS = {
-    NodeType.FAN:             (0, 1),
-    NodeType.DAMPER:          (1, 1),
-    NodeType.MIXING_PLENUM:   (3, 1),   # multiple inlets
-    NodeType.DUCT_SPLIT:      (1, 3),   # multiple outlets
-    NodeType.PRESSURE_OUTPUT: (1, 0),
+    NodeType.FAN:              (1, 1),   # inlet for return/sink-source input
+    NodeType.DAMPER:           (1, 1),
+    NodeType.MIXING_PLENUM:    (3, 1),   # multiple inlets
+    NodeType.DUCT_SPLIT:       (1, 3),   # multiple outlets
+    NodeType.DUCT_SINK_SOURCE: (3, 3),   # multiple inlets and outlets (zone hub)
+    NodeType.PRESSURE_OUTPUT:  (1, 0),
 }
 
 WIDTH = 180
@@ -101,13 +103,16 @@ class NodeItem(QGraphicsItem):
         self.update()
         return p
 
+    _MULTI_INLET_TYPES = {NodeType.MIXING_PLENUM, NodeType.DUCT_SINK_SOURCE}
+    _MULTI_OUTLET_TYPES = {NodeType.DUCT_SPLIT, NodeType.DUCT_SINK_SOURCE}
+
     def get_available_inlet(self) -> PortItem | None:
         """Return the first unconnected inlet port, or add one if all full."""
         for p in self._inlet_ports:
             if not p.connected:
                 return p
         # All occupied — grow if this node type supports multiple inlets
-        if self.node.node_type == NodeType.MIXING_PLENUM:
+        if self.node.node_type in self._MULTI_INLET_TYPES:
             return self.add_inlet_port()
         return None
 
@@ -117,7 +122,7 @@ class NodeItem(QGraphicsItem):
             if not p.connected:
                 return p
         # All occupied — grow if this node type supports multiple outlets
-        if self.node.node_type == NodeType.DUCT_SPLIT:
+        if self.node.node_type in self._MULTI_OUTLET_TYPES:
             return self.add_outlet_port()
         return None
 

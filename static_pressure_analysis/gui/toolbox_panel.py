@@ -9,11 +9,12 @@ from static_pressure_analysis.models import NodeType
 
 # (NodeType, display_name, icon_char, accent_color)
 EQUIPMENT = [
-    (NodeType.FAN,             "Fan",             "F", "#fb8c00"),
-    (NodeType.DAMPER,          "Damper",          "D", "#1e88e5"),
-    (NodeType.MIXING_PLENUM,   "Mixing Plenum",   "M", "#00897b"),
-    (NodeType.DUCT_SPLIT,      "Duct Split",      "Y", "#43a047"),
-    (NodeType.PRESSURE_OUTPUT, "Pressure Output",  "P", "#8e24aa"),
+    (NodeType.FAN,              "Fan",              "F", "#fb8c00"),
+    (NodeType.DAMPER,           "Damper",           "D", "#1e88e5"),
+    (NodeType.MIXING_PLENUM,    "Mixing Plenum",    "M", "#00897b"),
+    (NodeType.DUCT_SPLIT,       "Duct Split",       "Y", "#43a047"),
+    (NodeType.DUCT_SINK_SOURCE, "Duct Sink/Source", "Z", "#6d4c41"),
+    (NodeType.PRESSURE_OUTPUT,  "Pressure Output",  "P", "#8e24aa"),
 ]
 
 
