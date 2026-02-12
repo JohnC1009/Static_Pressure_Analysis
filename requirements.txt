@@ -1,3 +1,3 @@
 # Static Pressure Analysis
 # Python 3.10+ is required.
-# Uses tkinter (included with standard Python installations).
+PyQt5>=5.15
