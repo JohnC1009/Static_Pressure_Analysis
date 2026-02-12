@@ -1,0 +1,3 @@
+# Static Pressure Analysis
+# No external dependencies required - uses Python standard library (tkinter).
+# Python 3.10+ is required.
