@@ -8,6 +8,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplitter, QToolBar, QAction,
 
 from static_pressure_analysis.models import Project, Scenario
 from static_pressure_analysis.analysis import run_analysis, run_all_scenarios
+from static_pressure_analysis.analysis_iterative import (
+    run_iterative_analysis, run_all_iterative,
+)
 from static_pressure_analysis.serialization import save_project, load_project
 
 from .toolbox_panel import ToolboxPanel
@@ -93,6 +96,15 @@ class MainWindow(QMainWindow):
         save_act.setToolTip("Save project (Ctrl+S)")
         save_act.triggered.connect(self._on_save)
         toolbar.addAction(save_act)
+
+        toolbar.addSeparator()
+
+        # Solver selector
+        self._solver_combo = QComboBox()
+        self._solver_combo.addItems(["BFS (Quick)", "Hardy-Cross (Iterative)"])
+        self._solver_combo.setMinimumWidth(160)
+        toolbar.addWidget(QLabel(" Solver: "))
+        toolbar.addWidget(self._solver_combo)
 
         toolbar.addSeparator()
 
@@ -206,34 +218,47 @@ class MainWindow(QMainWindow):
         else:
             scenario = Scenario(name="Baseline")
 
-        result = run_analysis(self.project, scenario)
+        use_iterative = self._solver_combo.currentIndex() == 1
+        if use_iterative:
+            result = run_iterative_analysis(self.project, scenario)
+        else:
+            result = run_analysis(self.project, scenario)
         self.canvas_scene.update_node_displays(result)
 
+        solver_tag = "Hardy-Cross" if use_iterative else "BFS"
         if result.warnings:
             self._status_label.setText(
-                f"Analysis complete — {len(result.warnings)} warning(s)"
+                f"{solver_tag} complete — {len(result.warnings)} warning(s)"
             )
             QMessageBox.information(
                 self, "Analysis Warnings", "\n".join(result.warnings)
             )
         else:
             count = len(result.pressures)
+            extra = ""
+            if use_iterative and hasattr(result, "iterations"):
+                extra = f" ({result.iterations} iterations)"
             self._status_label.setText(
-                f"Analysis complete — {count} nodes calculated"
+                f"{solver_tag} complete — {count} nodes calculated{extra}"
             )
 
     def _on_run_all(self):
         self.scenario_panel.rebuild()
         self._update_scenario_combo()
 
-        results = run_all_scenarios(self.project)
+        use_iterative = self._solver_combo.currentIndex() == 1
+        if use_iterative:
+            results = run_all_iterative(self.project)
+        else:
+            results = run_all_scenarios(self.project)
         if results:
             # Display first scenario's results on canvas
             self.canvas_scene.update_node_displays(results[0])
 
         total_warnings = sum(len(r.warnings) for r in results)
+        solver_tag = "Hardy-Cross" if use_iterative else "BFS"
         self._status_label.setText(
-            f"Ran {len(results)} scenario(s) — {total_warnings} warning(s)"
+            f"{solver_tag}: Ran {len(results)} scenario(s) — {total_warnings} warning(s)"
         )
 
         # Show results summary dialog

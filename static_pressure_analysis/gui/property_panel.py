@@ -8,7 +8,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QFormLayout,
 
 from static_pressure_analysis.models import (
     FanParameters, DamperParameters,
-    MixingPlenumParameters, DuctSplitParameters, PressureOutputParameters,
+    MixingPlenumParameters, DuctSplitParameters, DuctSinkSourceParameters,
+    RigidDuctParameters, PressureOutputParameters,
 )
 
 
@@ -89,6 +90,29 @@ class PropertyPanel(QWidget):
                            params.pressure_drop, 0, 10, 2,
                            lambda v: setattr(params, "pressure_drop", v))
 
+        elif isinstance(params, DuctSinkSourceParameters):
+            self._add_spin(param_form, "Pressure Drop (in. w.g.)",
+                           params.pressure_drop, 0, 10, 2,
+                           lambda v: setattr(params, "pressure_drop", v))
+
+        elif isinstance(params, RigidDuctParameters):
+            self._add_spin(param_form, "Length (ft)", params.length,
+                           0, 10000, 1,
+                           lambda v: setattr(params, "length", v))
+            self._add_spin(param_form, "Diameter (in)", params.diameter,
+                           1, 120, 1,
+                           lambda v: setattr(params, "diameter", v))
+            self._add_spin(param_form, "Friction Rate (in/100ft)",
+                           params.friction_rate, 0, 1, 4,
+                           lambda v: setattr(params, "friction_rate", v))
+            self._add_spin(param_form, "Elevation (ft)", params.elevation,
+                           -1000, 1000, 1,
+                           lambda v: setattr(params, "elevation", v))
+            # Calculated pressure drop (read-only)
+            pd_label = QLabel(f"{params.pressure_drop:.4f} in. w.g.")
+            pd_label.setFont(QFont("Consolas", 9))
+            param_form.addRow("Pressure Drop", pd_label)
+
         elif isinstance(params, PressureOutputParameters):
             label_edit = QLineEdit(params.label)
             label_edit.textChanged.connect(
@@ -116,6 +140,9 @@ class PropertyPanel(QWidget):
         self._add_spin(form, "Friction Rate (in/100ft)",
                        connector.friction_rate, 0, 1, 4,
                        lambda v: setattr(connector, "friction_rate", v))
+        self._add_spin(form, "Elevation (ft)", connector.elevation,
+                       -1000, 1000, 1,
+                       lambda v: setattr(connector, "elevation", v))
 
         label_edit = QLineEdit(connector.label)
         label_edit.textChanged.connect(

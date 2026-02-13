@@ -15,6 +15,7 @@ NODE_COLORS = {
     NodeType.MIXING_PLENUM:    ("#e0f7fa", "#00897b", "M"),
     NodeType.DUCT_SPLIT:       ("#e8f5e9", "#43a047", "Y"),
     NodeType.DUCT_SINK_SOURCE: ("#efebe9", "#6d4c41", "Z"),
+    NodeType.RIGID_DUCT:       ("#eceff1", "#546e7a", "R"),
     NodeType.PRESSURE_OUTPUT:  ("#f3e5f5", "#8e24aa", "P"),
 }
 
@@ -25,6 +26,7 @@ _PORT_COUNTS = {
     NodeType.MIXING_PLENUM:    (3, 1),   # multiple inlets
     NodeType.DUCT_SPLIT:       (1, 3),   # multiple outlets
     NodeType.DUCT_SINK_SOURCE: (3, 3),   # multiple inlets and outlets (zone hub)
+    NodeType.RIGID_DUCT:       (1, 1),   # inline duct segment
     NodeType.PRESSURE_OUTPUT:  (1, 0),
 }
 

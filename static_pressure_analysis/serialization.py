@@ -15,6 +15,7 @@ from .models import (
     NodeType,
     PressureOutputParameters,
     Project,
+    RigidDuctParameters,
     Scenario,
 )
 
@@ -24,6 +25,7 @@ _PARAM_TYPE_MAP = {
     "MixingPlenumParameters": MixingPlenumParameters,
     "DuctSplitParameters": DuctSplitParameters,
     "DuctSinkSourceParameters": DuctSinkSourceParameters,
+    "RigidDuctParameters": RigidDuctParameters,
     "PressureOutputParameters": PressureOutputParameters,
 }
 
@@ -61,6 +63,7 @@ def project_to_dict(project: Project) -> dict:
             "length": conn.length,
             "diameter": conn.diameter,
             "friction_rate": conn.friction_rate,
+            "elevation": conn.elevation,
             "label": conn.label,
         }
 
@@ -103,6 +106,7 @@ def dict_to_project(d: dict) -> Project:
             length=cdata.get("length", 0),
             diameter=cdata.get("diameter", 12),
             friction_rate=cdata.get("friction_rate", 0.08),
+            elevation=cdata.get("elevation", 0),
             label=cdata.get("label", ""),
         )
         project.connectors[conn.id] = conn

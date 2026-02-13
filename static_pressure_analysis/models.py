@@ -12,6 +12,7 @@ class NodeType(Enum):
     MIXING_PLENUM = "Mixing Plenum"
     DUCT_SPLIT = "Duct Split"
     DUCT_SINK_SOURCE = "Duct Sink/Source"
+    RIGID_DUCT = "Rigid Duct"
     PRESSURE_OUTPUT = "Pressure Output"
 
 
@@ -55,6 +56,22 @@ class DuctSinkSourceParameters(NodeParameters):
 
 
 @dataclass
+class RigidDuctParameters(NodeParameters):
+    """A rigid duct segment that can be placed as a node for intermediate
+    pressure readings.  Carries the same properties as a connector but
+    lives in the node graph so analysis results are recorded on it."""
+    length: float = 0.0          # Feet
+    diameter: float = 12.0       # Inches (equivalent round diameter)
+    friction_rate: float = 0.08  # in. w.g. per 100 ft
+    elevation: float = 0.0       # Feet (reserved for future stack-effect calc)
+
+    @property
+    def pressure_drop(self) -> float:
+        """Duct friction loss: friction_rate * length / 100."""
+        return self.friction_rate * self.length / 100.0
+
+
+@dataclass
 class PressureOutputParameters(NodeParameters):
     """A measurement node that displays calculated static pressure."""
     label: str = "SP"
@@ -82,6 +99,7 @@ class Node:
             NodeType.MIXING_PLENUM: MixingPlenumParameters,
             NodeType.DUCT_SPLIT: DuctSplitParameters,
             NodeType.DUCT_SINK_SOURCE: DuctSinkSourceParameters,
+            NodeType.RIGID_DUCT: RigidDuctParameters,
             NodeType.PRESSURE_OUTPUT: PressureOutputParameters,
         }
         return defaults.get(self.node_type, NodeParameters)()
@@ -99,6 +117,7 @@ class Connector:
     length: float = 0.0         # Feet
     diameter: float = 12.0      # Inches (equivalent round diameter)
     friction_rate: float = 0.08  # in. w.g. per 100 ft
+    elevation: float = 0.0      # Feet (reserved for future stack-effect calc)
     label: str = ""
 
     @property

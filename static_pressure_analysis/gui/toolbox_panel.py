@@ -14,6 +14,7 @@ EQUIPMENT = [
     (NodeType.MIXING_PLENUM,    "Mixing Plenum",    "M", "#00897b"),
     (NodeType.DUCT_SPLIT,       "Duct Split",       "Y", "#43a047"),
     (NodeType.DUCT_SINK_SOURCE, "Duct Sink/Source", "Z", "#6d4c41"),
+    (NodeType.RIGID_DUCT,       "Rigid Duct",       "R", "#546e7a"),
     (NodeType.PRESSURE_OUTPUT,  "Pressure Output",  "P", "#8e24aa"),
 ]
 

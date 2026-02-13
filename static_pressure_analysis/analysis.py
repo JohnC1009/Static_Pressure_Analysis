@@ -18,6 +18,7 @@ from .models import (
     NodeType,
     PressureOutputParameters,
     Project,
+    RigidDuctParameters,
     Scenario,
 )
 
@@ -43,6 +44,8 @@ def _get_node_pressure_drop(node: Node) -> float:
     if isinstance(params, DuctSplitParameters):
         return params.pressure_drop
     if isinstance(params, DuctSinkSourceParameters):
+        return params.pressure_drop
+    if isinstance(params, RigidDuctParameters):
         return params.pressure_drop
     return 0.0
 
